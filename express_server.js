@@ -28,7 +28,7 @@ app.get("/urls", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL] };
-  res.render("urls_show", templateVars);
+  return res.render("urls_show", templateVars);
 });
 
 app.get("/urls.json", (req, res) => {
@@ -40,15 +40,25 @@ app.get("/hello", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
+  const shortUrl = generateRandomString(); //IS THE SHORT URL ADDED TO THE DATABASE?
+  urlDatabase[shortUrl] = req.body.longURL; //***req =incoming object. in this case the long url that the user inputted.
+  return res.redirect(`/urls/${shortUrl}`);
+});
+
+app.get("/u/:shortURL", (req, res) => {
+  const longURL = urlDatabase[req.params.shortURL];
+  if (!longURL) {
+    res.send("THIS SHORT URL DOES NOT EXIST");
+  }
+  //app.status(<code>) where to put this?
+  res.redirect(longURL);
 });
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
-//if no numebr is given to length when calling the function, it defaults to 6.
+//if no number is given to length when calling the function, it defaults to 6.
 let generateRandomString = function(length = 6) {
   let result = '';
   let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
