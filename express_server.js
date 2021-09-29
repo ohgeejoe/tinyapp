@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
+const cookies = require("cookie-parser");
+app.use(cookies());
 app.set("view engine", "ejs");
 
 const urlDatabase = {
@@ -12,7 +14,8 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
 app.get("/", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = { urls: urlDatabase
+  };
   res.render("urls_index", templateVars);
 });
 
@@ -21,13 +24,16 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = { urls: urlDatabase,
+    username: req.cookies["username"]
+  };
+ 
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL] };
+  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL] , username: req.cookies["username"]};
   return res.render("urls_show", templateVars);
 });
 
@@ -35,7 +41,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   // const { shortURL } = req.params;  this is called object deconstruction. works the same as line 36.
   const shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
-  console.log(urlDatabase);
   res.redirect("/urls");
 });
 
@@ -43,7 +48,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const newLongURL = req.body.longURL;
-  console.log(newLongURL);
   urlDatabase[shortURL] = newLongURL;
   res.redirect("/urls");
 });
@@ -57,9 +61,23 @@ app.get("/hello", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const shortUrl = generateRandomString(); //IS THE SHORT URL ADDED TO THE DATABASE?
+  const shortUrl = generateRandomString();
   urlDatabase[shortUrl] = req.body.longURL; //***req =incoming object. in this case the long url that the user inputted.
   return res.redirect(`/urls/${shortUrl}`);
+});
+
+//this is for the login routing.
+app.post("/login", (req, res) => {
+  const username = req.body.username; //to isolate and be able to resuse. extracting the username from the form request in _header.
+  res.cookie('username', username);
+  res.redirect("/urls");
+});
+
+//logout logic
+app.post("/logout", (req, res) => {
+  const username = req.body.username;
+  res.clearCookie('username', username);
+  res.redirect("/urls");
 });
 
 app.get("/u/:shortURL", (req, res) => {
