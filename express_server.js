@@ -4,31 +4,87 @@ const PORT = 8080; // default port 8080
 const cookies = require("cookie-parser");
 app.use(cookies());
 app.set("view engine", "ejs");
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({extended: true}));
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
 
-const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({extended: true}));
+const users = {
+  "userRandomID": {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur"
+  },
+  "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk"
+  }
+};
 
 app.get("/", (req, res) => {
   const templateVars = { urls: urlDatabase
-  };
+    , username: users[req.cookies.user_id] }; // added to pass user to header.ejs
   res.render("urls_index", templateVars);
+});
+
+//get Create registration page.
+app.get("/register", (req, res) => {
+  const templateVars = { username: users[req.cookies.user_id] };
+  res.render("urls_register", templateVars);
+});
+
+//post for create registration page.
+app.post("/register", (req, res) => {
+  const newID = generateRandomString();
+  let newRegistrant = {
+    id: newID,
+    email: req.body.email,
+    password: req.body.password
+  };
+
+  if (emailLookup(req.body.email)) {
+    //if email was found, redirect to homepage.
+    res.redirect("urls");
+    return;
+  }
+
+  //if email was not found dont do anything.
+  if (req.body.email === "" || req.body.password === "") {
+    return res.status(400).send({message: "This is an error 404!"});
+  }
+
+  users[newID] = newRegistrant;
+  res.cookie("user_id", newID);
+  const templateVars = { user: users[req.cookies.user_id] };
+  // res.render("urls_register", templateVars);
+  res.redirect("/urls");
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVars = { username: users[req.cookies.user_id] };
+  res.render("urls_new", templateVars);
 });
 
 app.get("/urls", (req, res) => {
+
+  let user = null;
+  if (req.cookies.user_id) {
+
+    user = users[req.cookies.user_id];
+    
+  }
+
   const templateVars = { urls: urlDatabase,
-    username: req.cookies["username"]
+    username: user
   };
+
  
   res.render("urls_index", templateVars);
+
 });
 
 app.get("/urls/:shortURL", (req, res) => {
@@ -66,20 +122,45 @@ app.post("/urls", (req, res) => {
   return res.redirect(`/urls/${shortUrl}`);
 });
 
-//this is for the login routing.
+
 app.post("/login", (req, res) => {
-  const username = req.body.username; //to isolate and be able to resuse. extracting the username from the form request in _header.
-  res.cookie('username', username);
-  res.redirect("/urls");
+  const email = req.body.email;
+  let newUser = null;
+  for (let key in users) {
+    if (users[key].email === email) {
+      newUser = users[key];
+    }
+  }
+  let inputtedEmail = req.body.email;
+  let inputtedPassword = req.body.password;
+  console.log("what is this?" + inputtedEmail);
+
+  if (emailLookup(inputtedEmail)) {
+    console.log("popopopo");
+    if (inputtedPassword === passwordLookup(inputtedEmail)) {
+      res.cookie('user_id', newUser.key);
+    }
+  } else {
+    res.status(403).send({message: "This is an error 403!"});
+  }
+  res.cookie('user_id', newUser.id);
+  return res.redirect("/urls");
 });
+
+// login get logic FOR A NEW LOGIN PAGE
+app.get("/login", (req, res) => {
+  const templateVars = {username : ""};
+  res.render('urls_login', templateVars);
+});
+
 
 //logout logic
 app.post("/logout", (req, res) => {
-  const username = req.body.username;
-  res.clearCookie('username', username);
+  res.clearCookie('user_id');
   res.redirect("/urls");
 });
 
+//if no ShortURL, error logic
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
   if (!longURL) {
@@ -89,9 +170,30 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
+
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
+  console.log(`Connected. Listening on port ${PORT}!`);
+  
 });
+
+//email lookup helper function
+let emailLookup = function(searchingEmailAddress) {
+  for (let find in users) {
+    if (searchingEmailAddress === users[find].email) {
+      return true;
+    }
+  }
+};
+
+//password lookup helper function. returns the password not a boolean
+let passwordLookup = function(searchingEmailAddress) {
+  for (let find in users) {
+    if (searchingEmailAddress === users[find].email) {
+      return users[find].password;
+    }
+    console.log("password was not found");
+  }
+};
 
 //if no number is given to length when calling the function, it defaults to 6.
 let generateRandomString = function(length = 6) {
