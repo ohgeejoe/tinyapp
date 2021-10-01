@@ -7,10 +7,33 @@ app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
+// const urlDatabase = {
+//   "b2xVn2": "http://www.lighthouselabs.ca",
+//   "9sm5xK": "http://www.google.com"
+// };
+
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b2xVn2: { longURL: "http://www.lighthouselabs.ca",
+    userID: "userRandomID"
+  },
+
+  "9sm5xK": {
+    longURL: "http://www.google.com",
+    userID: "user2RandomID"
+  }
 };
+
+//only if it belongs to our user cookie name (what we are passing into the function)
+let newDatabaseToOld = function(userID) {
+  let outputObj = {};
+  for (const [key, value] of Object.entries(urlDatabase)) {
+    if (userID === value.userID) {
+      outputObj[key] = value.longURL;
+    }
+  }
+  return outputObj;
+};
+
 
 const users = {
   "userRandomID": {
@@ -26,9 +49,7 @@ const users = {
 };
 
 app.get("/", (req, res) => {
-  const templateVars = { urls: urlDatabase
-    , username: users[req.cookies.user_id] }; // added to pass user to header.ejs
-  res.render("urls_index", templateVars);
+  res.redirect("/urls");
 });
 
 //get Create registration page.
@@ -65,46 +86,70 @@ app.post("/register", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
+  let userIdFromCookie = req.cookies.user_id;
+  // if statment checking if user is logged in
+  //is it a redirect or an error?
+  if (!userIdFromCookie) {
+    // setTimeout(res.status(403).send({message: "Please login!"}), 3000); 
+    res.redirect('/login'); 
+  }
   const templateVars = { username: users[req.cookies.user_id] };
   res.render("urls_new", templateVars);
 });
 
+
 app.get("/urls", (req, res) => {
-
   let user = null;
-  if (req.cookies.user_id) {
-
-    user = users[req.cookies.user_id];
-    
+  if (!req.cookies.user_id) {
+    //CHANGE THIS TO AN HTML ERROR MESSAGE
+    // res.status(400).send({message: "You are not logged in!"});
+    res.redirect('/login');
   }
-
-  const templateVars = { urls: urlDatabase,
-    username: user
+  const templateVars = { urls: newDatabaseToOld(req.cookies.user_id),
+    username: users[req.cookies.user_id]
   };
-
- 
   res.render("urls_index", templateVars);
+});
 
+
+app.post("/urls", (req, res) => {
+  const shortUrl = generateRandomString();
+  urlDatabase[shortUrl] = {longURL: req.body.longURL,
+    userID: req.cookies.user_id};
+  return res.redirect(`/urls/${shortUrl}`);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL] , username: req.cookies["username"]};
+  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL].longURL , username: req.cookies["username"]};
   return res.render("urls_show", templateVars);
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   // const { shortURL } = req.params;  this is called object deconstruction. works the same as line 36.
   const shortURL = req.params.shortURL;
-  delete urlDatabase[shortURL];
-  res.redirect("/urls");
+  if (req.cookies.user_id === urlDatabase[shortURL].userID) {
+    delete urlDatabase[shortURL];
+    res.redirect("/urls");
+  }
+  else {res.send(400, "This shortURL is not associated with your login")}
 });
+
+// app.post("/urls/:shortURL/delete", (req, res) => {
+//   const shortURL = req.params.shortURL;
+//   if(req.session.user_id === urlDatabase[shortURL].userID) {
+//     delete urlDatabase[req.params.shortURL];
+//     res.redirect("/urls");
+//   }  else {
+//     res.send(400, "You don't have the power to delete that URL :(")
+//   }
 
 //updating existing shortURL with new long URL
 app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const newLongURL = req.body.longURL;
-  urlDatabase[shortURL] = newLongURL;
+  urlDatabase[shortURL] = {longURL: newLongURL,
+    userID: req.cookies.user_id};
   res.redirect("/urls");
 });
 
@@ -116,13 +161,6 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
-app.post("/urls", (req, res) => {
-  const shortUrl = generateRandomString();
-  urlDatabase[shortUrl] = req.body.longURL; //***req =incoming object. in this case the long url that the user inputted.
-  return res.redirect(`/urls/${shortUrl}`);
-});
-
-
 app.post("/login", (req, res) => {
   const email = req.body.email;
   let newUser = null;
@@ -133,8 +171,6 @@ app.post("/login", (req, res) => {
   }
   let inputtedEmail = req.body.email;
   let inputtedPassword = req.body.password;
-  console.log("what is this?" + inputtedEmail);
-
   if (emailLookup(inputtedEmail)) {
     console.log("popopopo");
     if (inputtedPassword === passwordLookup(inputtedEmail)) {
@@ -162,7 +198,7 @@ app.post("/logout", (req, res) => {
 
 //if no ShortURL, error logic
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   if (!longURL) {
     res.send("THIS SHORT URL DOES NOT EXIST");
   }
