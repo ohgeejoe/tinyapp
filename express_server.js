@@ -1,23 +1,22 @@
 const express = require("express");
 const bcrypt = require('bcryptjs');
 const app = express();
-const PORT = 8080; // default port 8080
+const PORT = 8080; 
 const cookies = require("cookie-parser");
 const cookieSession = require('cookie-session');
 app.use(cookieSession({
   name: 'session',
-  keys: [/* secret keys */'sample'],
+  keys: ['sample'],
 
-  // Cookie Options
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  maxAge: 24 * 60 * 60 * 1000 
 }));
 app.use(cookies());
 app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-const {getUserByEmail, passwordLookup, emailLookup, generateRandomString} = require("./helper");
+const {getUserByEmail, passwordLookup, emailLookup, generateRandomString} = require("./helpers");
 
-const password = "purple-monkey-dinosaur"; // found in the req.params object
+const password = "purple-monkey-dinosaur";
 const hashedPassword = bcrypt.hashSync(password, 10);
 
 const urlDatabase = {
@@ -42,12 +41,11 @@ let newDatabaseToOld = function(userID) {
   return outputObj;
 };
 
-
 const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur" //only as example
+    password: "purple-monkey-dinosaur" 
   },
   "user2RandomID": {
     id: "user2RandomID",
@@ -110,7 +108,6 @@ app.get("/urls", (req, res) => {
   let user = null;
   // console.log(req.session);
   if (!req.session.user_id) {
-    //CHANGE THIS TO AN HTML ERROR MESSAGE
     // res.status(400).send({message: "You are not logged in!"});
     return res.redirect('/login');
   }
@@ -119,9 +116,6 @@ app.get("/urls", (req, res) => {
   };
   res.render("urls_index", templateVars);
 });
-
-
-
 
 app.post("/urls", (req, res) => {
   const shortUrl = generateRandomString();
@@ -137,23 +131,14 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  // const { shortURL } = req.params;  this is called object deconstruction. works the same as line 36.
   const shortURL = req.params.shortURL;
   if (req.session.user_id === urlDatabase[shortURL].userID) {
     delete urlDatabase[shortURL];
     return res.redirect("/urls");
   }
-  else {res.send(400, "This shortURL is not associated with your login")}
+  else {
+    res.send(400, "This shortURL is not associated with your login")};
 });
-
-// app.post("/urls/:shortURL/delete", (req, res) => {
-//   const shortURL = req.params.shortURL;
-//   if(req.session.user_id === urlDatabase[shortURL].userID) {
-//     delete urlDatabase[req.params.shortURL];
-//     res.redirect("/urls");
-//   }  else {
-//     res.send(400, "You don't have the power to delete that URL :(")
-//   }
 
 //updating existing shortURL with new long URL
 app.post("/urls/:shortURL", (req, res) => {
@@ -184,7 +169,6 @@ app.post("/login", (req, res) => {
   let inputtedPassword = req.body.password;
   if (emailLookup(inputtedEmail)) {
     if (bcrypt.compareSync(inputtedPassword, hashedPassword)); {
-    // if (inputtedPassword === passwordLookup(inputtedEmail)) {
       req.session.user_id = newUser.key;
     }
   } else {
@@ -213,7 +197,6 @@ app.get("/u/:shortURL", (req, res) => {
   if (!longURL) {
     return res.send("THIS SHORT URL DOES NOT EXIST");
   }
-  //app.status(<code>) where to put this?
   res.redirect(longURL);
 });
 
