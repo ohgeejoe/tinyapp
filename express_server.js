@@ -97,7 +97,7 @@ app.get("/urls/new", (req, res) => {
   //is it a redirect or an error?
   if (!userIdFromCookie) {
     // setTimeout(res.status(403).send({message: "Please login!"}), 3000); 
-    return res.redirect('/login'); 
+    return res.redirect('/login');
   }
   const templateVars = { username: users[req.session.user_id] };
   res.render("urls_new", templateVars);
@@ -126,7 +126,7 @@ app.post("/urls", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL].longURL , username: req.session["username"]};
+  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL].longURL , username: users[req.session.user_id]};
   return res.render("urls_show", templateVars);
 });
 
