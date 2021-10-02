@@ -249,3 +249,12 @@ let generateRandomString = function(length = 6) {
   }
   return result;
 };
+
+//get user by email helper function
+let getUserByEmail = function(email, database) {
+  for (let user in database) {
+    if (database[user].email == email) {
+      return database[user].id;
+    }
+  }
+};
