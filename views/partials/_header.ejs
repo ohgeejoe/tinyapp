@@ -15,7 +15,7 @@
         <a class="m-1 btn btn-primary" href="/register" method="POST"> Register </a> 
         <a class="m-1 btn btn-primary" href="/login" method="POST"> Login </a> 
     <%  } else {%>
-        <p><%= username.email %></p>
+        <p style="color: white;"><%= username.email %></p>
         <form class="m-1 btn btn-primary" action="/logout" method="POST"> <button type="submit" class="btn btn-primary"> Logout</button> </form>
       <% } %>
     </form>

@@ -1,4 +1,5 @@
 // const bcrypt = require("bcrypt");
+const users = {};
 
 //if no number is given to length when calling the function, it defaults to 6.
 let generateRandomString = function(length = 6) {
