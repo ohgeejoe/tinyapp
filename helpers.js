@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+// const bcrypt = require("bcrypt");
 
 //if no number is given to length when calling the function, it defaults to 6.
 let generateRandomString = function(length = 6) {
@@ -10,7 +10,6 @@ let generateRandomString = function(length = 6) {
   }
   return result;
 };
-
 //get user by email helper function
 let getUserByEmail = function(email, database) {
   for (let user in database) {
