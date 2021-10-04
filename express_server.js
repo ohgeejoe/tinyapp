@@ -1,16 +1,14 @@
 const express = require("express");
 const bcrypt = require('bcryptjs');
 const app = express();
-const PORT = 8080; 
-const cookies = require("cookie-parser");
+const PORT = 8080;
 const cookieSession = require('cookie-session');
 app.use(cookieSession({
   name: 'session',
   keys: ['sample'],
 
-  maxAge: 24 * 60 * 60 * 1000 
+  maxAge: 24 * 60 * 60 * 1000
 }));
-app.use(cookies());
 app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -79,9 +77,10 @@ app.post("/register", (req, res) => {
     return;
   }
 
-  //if email was not found dont do anything.
+  //if email was not found dont do anything. need to refactor to an HTML error.
   if (req.body.email === "" || req.body.password === "") {
-    return res.status(400).send({message: "This is an error 404!"});
+    return res.redirect("/urls_error");
+    // return res.status(400).send({message: "This is an error 404!"});
   }
 
   users[newID] = newRegistrant;
@@ -91,12 +90,18 @@ app.post("/register", (req, res) => {
   res.redirect("/urls");
 });
 
+app.get("/urls_error", (req, res) => {
+  const templateVars = { username: null };
+  res.render("urls_error", templateVars);
+});
+
+
 app.get("/urls/new", (req, res) => {
   let userIdFromCookie = req.session.user_id;
   // if statment checking if user is logged in
   //is it a redirect or an error?
   if (!userIdFromCookie) {
-    // setTimeout(res.status(403).send({message: "Please login!"}), 3000); 
+    // setTimeout(res.status(403).send({message: "Please login!"}), 3000);
     return res.redirect('/login');
   }
   const templateVars = { username: users[req.session.user_id] };
@@ -124,6 +129,7 @@ app.post("/urls", (req, res) => {
   return res.redirect(`/urls/${shortUrl}`);
 });
 
+//should return relevant error message if not logged in.
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL].longURL , username: users[req.session.user_id]};
@@ -135,9 +141,9 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   if (req.session.user_id === urlDatabase[shortURL].userID) {
     delete urlDatabase[shortURL];
     return res.redirect("/urls");
+  } else {
+    res.send(400, "This shortURL is not associated with your login");
   }
-  else {
-    res.send(400, "This shortURL is not associated with your login")};
 });
 
 //updating existing shortURL with new long URL
