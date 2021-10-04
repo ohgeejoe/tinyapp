@@ -73,14 +73,12 @@ app.post("/register", (req, res) => {
 
   if (emailLookup(req.body.email)) {
     //if email was found, redirect to homepage.
-    res.redirect("urls");
-    return;
+    return res.redirect("urls");
   }
 
-  //if email was not found dont do anything. need to refactor to an HTML error.
+  //if email was not found, HTML error page
   if (req.body.email === "" || req.body.password === "") {
     return res.redirect("/urls_error");
-    // return res.status(400).send({message: "This is an error 404!"});
   }
 
   users[newID] = newRegistrant;
@@ -90,18 +88,18 @@ app.post("/register", (req, res) => {
   res.redirect("/urls");
 });
 
+//HTML error page
 app.get("/urls_error", (req, res) => {
   const templateVars = { username: null };
   res.render("urls_error", templateVars);
 });
 
-
+//new short URL
 app.get("/urls/new", (req, res) => {
   let userIdFromCookie = req.session.user_id;
   // if statment checking if user is logged in
   //is it a redirect or an error?
   if (!userIdFromCookie) {
-    // setTimeout(res.status(403).send({message: "Please login!"}), 3000);
     return res.redirect('/login');
   }
   const templateVars = { username: users[req.session.user_id] };
@@ -111,9 +109,7 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls", (req, res) => {
   let user = null;
-  // console.log(req.session);
   if (!req.session.user_id) {
-    // res.status(400).send({message: "You are not logged in!"});
     return res.redirect('/login');
   }
   const templateVars = { urls: newDatabaseToOld(req.session.user_id),
@@ -132,7 +128,10 @@ app.post("/urls", (req, res) => {
 //should return relevant error message if not logged in.
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL].longURL , username: users[req.session.user_id]};
+  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL] , username: users[req.session.user_id]};
+  if (req.session.userID === undefined) {
+    return res.redirect("/urls_error");
+  }
   return res.render("urls_show", templateVars);
 });
 
