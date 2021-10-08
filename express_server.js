@@ -12,20 +12,20 @@ app.use(cookieSession({
 app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-const {getUserByEmail, passwordLookup, emailLookup, generateRandomString} = require("./helpers");
+const { emailLookup, generateRandomString} = require("./helpers");
 
-const password = "purple-monkey-dinosaur";
+const password = "";
 const hashedPassword = bcrypt.hashSync(password, 10);
 
 const urlDatabase = {
-  b2xVn2: { longURL: "http://www.lighthouselabs.ca",
-    userID: "userRandomID"
-  },
+  // b2xVn2: { longURL: "http://www.lighthouselabs.ca",
+  //   userID: "userRandomID"
+  // },
 
-  "9sm5xK": {
-    longURL: "http://www.google.com",
-    userID: "user2RandomID"
-  }
+  // "9sm5xK": {
+  //   longURL: "http://www.google.com",
+  //   userID: "user2RandomID"
+  // }
 };
 
 //only if it belongs to our user cookie name (what we are passing into the function)
@@ -78,13 +78,12 @@ app.post("/register", (req, res) => {
 
   //if email was not found, HTML error page
   if (req.body.email === "" || req.body.password === "") {
-    return res.redirect("/urls_error");
+    return res.redirect("/urls_error_login");
   }
 
   users[newID] = newRegistrant;
   req.session.user_id = newID;
   const templateVars = { user: users[req.session.user_id] };
-  // res.render("urls_register", templateVars);
   res.redirect("/urls");
 });
 
@@ -94,10 +93,15 @@ app.get("/urls_error", (req, res) => {
   res.render("urls_error", templateVars);
 });
 
+//HTML error page for blank field in login.
+app.get("/urls_error_login", (req, res) => {
+  const templateVars = { username: null };
+  res.render("urls_error_login", templateVars);
+});
+
 //new short URL
 app.get("/urls/new", (req, res) => {
   let userIdFromCookie = req.session.user_id;
-  // if statment checking if user is logged in
   //is it a redirect or an error?
   if (!userIdFromCookie) {
     return res.redirect('/login');
@@ -132,7 +136,9 @@ app.get("/urls/:shortURL", (req, res) => {
   if (req.session.userID === undefined) {
     return res.redirect("/urls_error");
   }
-  return res.render("urls_show", templateVars);
+  //need to implement another if statement to see if short URL belongs to the creator.
+  if (req.session.userID)
+    return res.render("urls_show", templateVars);
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -172,6 +178,10 @@ app.post("/login", (req, res) => {
   }
   let inputtedEmail = req.body.email;
   let inputtedPassword = req.body.password;
+  //if either login field is empty, redirect to error. need to make a relevant HTML error.
+  if (inputtedEmail === "" || inputtedPassword === "") {
+    return res.redirect("/urls_error_login");
+  }
   if (emailLookup(inputtedEmail)) {
     if (bcrypt.compareSync(inputtedPassword, hashedPassword)); {
       req.session.user_id = newUser.key;
