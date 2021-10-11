@@ -12,7 +12,7 @@ app.use(cookieSession({
 app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-const { emailLookup, generateRandomString} = require("./helpers");
+const { emailLookup, generateRandomString, newDatabaseToOld} = require("./helpers");
 
 const password = "";
 const hashedPassword = bcrypt.hashSync(password, 10);
@@ -28,16 +28,6 @@ const urlDatabase = {
   // }
 };
 
-//only if it belongs to our user cookie name (what we are passing into the function)
-let newDatabaseToOld = function(userID) {
-  let outputObj = {};
-  for (const [key, value] of Object.entries(urlDatabase)) {
-    if (userID === value.userID) {
-      outputObj[key] = value.longURL;
-    }
-  }
-  return outputObj;
-};
 
 const users = {
   "userRandomID": {
@@ -78,6 +68,7 @@ app.post("/register", (req, res) => {
 
   //if email was not found, HTML error page
   if (req.body.email === "" || req.body.password === "") {
+
     return res.redirect("/urls_error_login");
   }
 
@@ -116,7 +107,7 @@ app.get("/urls", (req, res) => {
   if (!req.session.user_id) {
     return res.redirect('/login');
   }
-  const templateVars = { urls: newDatabaseToOld(req.session.user_id),
+  const templateVars = { urls: newDatabaseToOld(req.session.user_id, urlDatabase),
     username: users[req.session.user_id]
   };
   res.render("urls_index", templateVars);
@@ -129,20 +120,36 @@ app.post("/urls", (req, res) => {
   return res.redirect(`/urls/${shortUrl}`);
 });
 
-//should return relevant error message if not logged in.
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL] , username: users[req.session.user_id]};
-  if (req.session.userID === undefined) {
-    return res.redirect("/urls_error");
+  
+  //if not loggedin
+  if (req.session.user_id === undefined) {
+    const templateVars = { username: null };
+    return res.render("urls_error_notloggedin", templateVars);
   }
-  //need to implement another if statement to see if short URL belongs to the creator.
-  if (req.session.userID)
-    return res.render("urls_show", templateVars);
+  // //user does not have access
+  // if (req.session.user_id !== urlDatabase[shortURL].userID) {
+  //   const templateVars = { username: null };
+  //   return res.render("urls_error_noaccess", templateVars);
+  // }
+  //happy path
+  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL].longURL , username: users[req.session.user_id]};
+  res.render("urls_show", templateVars);
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
+  //if not loggedin.
+  if (req.session.user_id === undefined) {
+    const templateVars = { username: null };
+    return res.render("urls_error_notloggedin", templateVars);
+  }
+  //create a relelvant html error page. user does not have access
+  if (req.session.user_id !== urlDatabase[shortURL].userID) {
+    const templateVars = { username: null };
+    return res.render("urls_error_noaccess", templateVars);
+  }
   if (req.session.user_id === urlDatabase[shortURL].userID) {
     delete urlDatabase[shortURL];
     return res.redirect("/urls");
@@ -153,8 +160,14 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 //updating existing shortURL with new long URL
 app.post("/urls/:shortURL", (req, res) => {
+
   const shortURL = req.params.shortURL;
   const newLongURL = req.body.longURL;
+   //user does not have access dosent work
+   if (req.session.user_id !== urlDatabase[shortURL].userID) {
+    const templateVars = { username: null };
+    return res.render("urls_error_noaccess", templateVars);
+  }
   urlDatabase[shortURL] = {longURL: newLongURL,
     userID: req.session.user_id};
   res.redirect("/urls");

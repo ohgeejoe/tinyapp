@@ -1,6 +1,7 @@
 // const bcrypt = require("bcrypt");
 const users = {};
 
+
 //if no number is given to length when calling the function, it defaults to 6.
 let generateRandomString = function(length = 6) {
   let result = '';
@@ -39,5 +40,21 @@ let passwordLookup = function(searchingEmailAddress) {
   }
 };
 
+//only if it belongs to our user cookie name (what we are passing into the function)
 
-module.exports = {getUserByEmail, passwordLookup, emailLookup, generateRandomString}
+let newDatabaseToOld = function(userID, database) {
+  let outputObj = {};
+  // for (const [key, value] of Object.entries(urlDatabase)) {
+  //   if (userID === value.userID) {
+  //     outputObj[key] = value.longURL;
+  //   }
+  // }
+  for (const shortUrl in database) {
+    if (userID === database[shortUrl].userID) {
+      outputObj[shortUrl] = database[shortUrl];
+    }
+  }
+  return outputObj;
+};
+
+module.exports = {getUserByEmail, passwordLookup, emailLookup, generateRandomString, newDatabaseToOld};
