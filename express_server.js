@@ -200,7 +200,10 @@ app.post("/login", (req, res) => {
       req.session.user_id = newUser.key;
     }
   } else {
-    res.status(403).send({message: "This is an error 403!"});
+    //if they have not registered before.
+    window.alert("You have not registered!");
+    res.redirect("/register");
+    
   }
   req.session.user_id = newUser.id;
   return res.redirect("/urls");
