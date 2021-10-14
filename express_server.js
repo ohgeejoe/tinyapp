@@ -12,12 +12,11 @@ app.use(cookieSession({
 app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-const { emailLookup, generateRandomString, newDatabaseToOld} = require("./helpers");
+const { emailLookup, generateRandomString, newDatabaseToOld, getUserByEmail} = require("./helpers");
 
-const password = "";
-const hashedPassword = bcrypt.hashSync(password, 10);
 
 const urlDatabase = {
+  //example urls for reference
   // b2xVn2: { longURL: "http://www.lighthouselabs.ca",
   //   userID: "userRandomID"
   // },
@@ -30,16 +29,17 @@ const urlDatabase = {
 
 
 const users = {
-  "userRandomID": {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur"
-  },
-  "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk"
-  }
+  //example users for reference
+  // "userRandomID": {
+  //   id: "userRandomID",
+  //   email: "user@example.com",
+  //   password: "purple-monkey-dinosaur"
+  // },
+  // "user2RandomID": {
+  //   id: "user2RandomID",
+  //   email: "user2@example.com",
+  //   password: "dishwasher-funk"
+  // }
 };
 
 app.get("/", (req, res) => {
@@ -54,27 +54,26 @@ app.get("/register", (req, res) => {
 
 //post for create registration page.
 app.post("/register", (req, res) => {
+  //if email was not found, HTML error page
+  if (req.body.email === "" || req.body.password === "") {
+    return res.redirect("/urls_error_login");
+  }
+
+  if (emailLookup(req.body.email, users)) {
+    //if email was found, redirect to homepage.
+    return res.status(400).send("This email is already registed");
+  }
+
   const newID = generateRandomString();
   let newRegistrant = {
     id: newID,
     email: req.body.email,
-    password: req.body.password
+    password: bcrypt.hashSync(req.body.password, 10)
   };
 
-  if (emailLookup(req.body.email)) {
-    //if email was found, redirect to homepage.
-    return res.redirect("urls");
-  }
-
-  //if email was not found, HTML error page
-  if (req.body.email === "" || req.body.password === "") {
-
-    return res.redirect("/urls_error_login");
-  }
-
   users[newID] = newRegistrant;
+
   req.session.user_id = newID;
-  const templateVars = { user: users[req.session.user_id] };
   res.redirect("/urls");
 });
 
@@ -114,6 +113,9 @@ app.get("/urls", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
+  if (!req.session.user_id) {
+    return res.status(400).send("You are not logged in!");
+  }
   const shortUrl = generateRandomString();
   urlDatabase[shortUrl] = {longURL: req.body.longURL,
     userID: req.session.user_id};
@@ -128,12 +130,7 @@ app.get("/urls/:shortURL", (req, res) => {
     const templateVars = { username: null };
     return res.render("urls_error_notloggedin", templateVars);
   }
-  // //user does not have access
-  // if (req.session.user_id !== urlDatabase[shortURL].userID) {
-  //   const templateVars = { username: null };
-  //   return res.render("urls_error_noaccess", templateVars);
-  // }
-  //happy path
+
   const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL].longURL , username: users[req.session.user_id]};
   res.render("urls_show", templateVars);
 });
@@ -160,16 +157,14 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 //updating existing shortURL with new long URL
 app.post("/urls/:shortURL", (req, res) => {
-
   const shortURL = req.params.shortURL;
   const newLongURL = req.body.longURL;
-   //user does not have access dosent work
-   if (req.session.user_id !== urlDatabase[shortURL].userID) {
+  //user does not have access dosent work, or if you are not logged in.
+  if (req.session.user_id !== urlDatabase[shortURL].userID || !req.session.user_id) {
     const templateVars = { username: null };
     return res.render("urls_error_noaccess", templateVars);
   }
-  urlDatabase[shortURL] = {longURL: newLongURL,
-    userID: req.session.user_id};
+  urlDatabase[shortURL].longURL = newLongURL;
   res.redirect("/urls");
 });
 
@@ -182,30 +177,24 @@ app.get("/hello", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const email = req.body.email;
-  let newUser = null;
-  for (let key in users) {
-    if (users[key].email === email) {
-      newUser = users[key];
-    }
-  }
   let inputtedEmail = req.body.email;
   let inputtedPassword = req.body.password;
   //if either login field is empty, redirect to error. need to make a relevant HTML error.
-  if (inputtedEmail === "" || inputtedPassword === "") {
+  if (inputtedEmail === "" || inputtedPassword === "" || !inputtedEmail || !inputtedPassword) {
     return res.redirect("/urls_error_login");
   }
-  if (emailLookup(inputtedEmail)) {
-    if (bcrypt.compareSync(inputtedPassword, hashedPassword)); {
-      req.session.user_id = newUser.key;
-    }
-  } else {
+
+  if (!emailLookup(inputtedEmail, users)) {
     //if they have not registered before.
-    window.alert("You have not registered!");
-    res.redirect("/register");
-    
+    return res.status(400).send("This email does not exist!");
   }
-  req.session.user_id = newUser.id;
+
+  const user = getUserByEmail(inputtedEmail, users);
+
+  if (!bcrypt.compareSync(inputtedPassword, user.password)) {
+    return res.status(400).send("email/password does not match");
+  }
+  req.session.user_id = user.id;
   return res.redirect("/urls");
 });
 

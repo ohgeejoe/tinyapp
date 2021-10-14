@@ -1,4 +1,3 @@
-// const bcrypt = require("bcrypt");
 const users = {};
 
 
@@ -15,19 +14,20 @@ let generateRandomString = function(length = 6) {
 //get user by email helper function
 let getUserByEmail = function(email, database) {
   for (let user in database) {
-    if (database[user].email == email) {
-      return database[user].id;
+    if (database[user].email === email) {
+      return database[user];
     }
   }
 };
 
 //email lookup helper function
-let emailLookup = function(searchingEmailAddress) {
-  for (let find in users) {
-    if (searchingEmailAddress === users[find].email) {
+let emailLookup = function(searchingEmailAddress, usersDB) {
+  for (let key in usersDB) {
+    if (searchingEmailAddress === usersDB[key].email) {
       return true;
     }
   }
+  return false;
 };
 
 //password lookup helper function. returns the password not a boolean
