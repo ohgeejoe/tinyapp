@@ -162,6 +162,7 @@ app.post("/urls/:shortURL", (req, res) => {
   //user does not have access dosent work, or if you are not logged in.
   if (req.session.user_id !== urlDatabase[shortURL].userID || !req.session.user_id) {
     const templateVars = { username: null };
+    res.status(401);
     return res.render("urls_error_noaccess", templateVars);
   }
   urlDatabase[shortURL].longURL = newLongURL;
@@ -181,6 +182,7 @@ app.post("/login", (req, res) => {
   let inputtedPassword = req.body.password;
   //if either login field is empty, redirect to error. need to make a relevant HTML error.
   if (inputtedEmail === "" || inputtedPassword === "" || !inputtedEmail || !inputtedPassword) {
+    res.status(401);
     return res.redirect("/urls_error_login");
   }
 
